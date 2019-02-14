@@ -1,0 +1,6 @@
+[Unit]
+Description=Warn if no recent borg backups are found
+
+[Service]
+User=root
+ExecStart=/bin/borg-warn-if-no-recent-backup

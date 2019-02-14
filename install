@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Make sure only root can run our script
+if [[ $EUID -ne 0 ]]; then
+    echo "This script must be run as root" 1>&2
+    exit 1
+fi
+
+# Directory of this script
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+# Symlink to /bin/
+ln -sf $DIR/borg-init        /bin/borg-init
+ln -sf $DIR/borg-backup      /bin/borg-backup
+ln -sf $DIR/borg-list        /bin/borg-list
+ln -sf $DIR/borg-mount       /bin/borg-mount
+ln -sf $DIR/borg-umount      /bin/borg-umount
+ln -sf $DIR/borg-warn-if-no-recent-backup /bin/borg-warn-if-no-recent-backup
+ln -sf $DIR/borg-warn-if-no-recent-backup.py /bin/borg-warn-if-no-recent-backup.py
+
+# Symlink systemd units (services and timers)
+ln -sf $DIR/borg-backup.service /usr/lib/systemd/system/borg-backup.service
+ln -sf $DIR/borg-backup.timer /usr/lib/systemd/system/borg-backup.timer
+ln -sf $DIR/borg-warn-if-no-recent-backup.service /usr/lib/systemd/system/borg-warn-if-no-recent-backup.service
+ln -sf $DIR/borg-warn-if-no-recent-backup.timer /usr/lib/systemd/system/borg-warn-if-no-recent-backup.timer
+
+# Symlink configuration
+mkdir -p /etc/borg-helper
+ln -sf $DIR/borg-helper.conf /etc/borg-helper/borg-helper.conf
+ln -sf $DIR/exclude /etc/borg-helper/exclude
+
+# Enable systemd timers
+systemctl enable borg-warn-if-no-recent-backup.timer
+systemctl enable borg-backup.timer
+
+# Reload systemd just in case unit files changed
+systemctl daemon-reload
+
+# Print advice
+echo "Once ready please start periodic execution via:"
+echo "sudo systemctl start borg-warn-if-no-recent-backup.timer"
+echo "sudo systemctl start borg-backup.timer"

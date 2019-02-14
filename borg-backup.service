@@ -1,0 +1,7 @@
+[Unit]
+Description=Do borg backup
+
+[Service]
+User=root
+StandardError=file:/var/log/borg.log
+ExecStart=/bin/bash /bin/borg-backup

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Make sure only root can run our script
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
+
+# Learn $BORG_REPO
+source /etc/borg-helper/borg-helper.conf
+
+export BORG_MOUNT_DIR=/var/run/media/$USER/borg-repo
+
+borg umount $BORG_MOUNT_DIR
+
+rmdir $BORG_MOUNT_DIR

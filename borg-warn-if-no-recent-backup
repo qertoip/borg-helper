@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# Learn $BORG_REPO, $DAYS_WITHOUT_BACKUP_THRESHOLD, $DESKTOP_NOTIFY_USER_ID
+source /etc/borg-helper/borg-helper.conf
+
+# Directory of this script
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+
+/bin/python3 $DIR/borg-warn-if-no-recent-backup.py

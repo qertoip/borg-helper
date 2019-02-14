@@ -1,0 +1,78 @@
+#!/bin/bash
+
+# Make sure only root can run our script
+if [[ $EUID -ne 0 ]]; then
+    echo "This script must be run as root" 1>&2
+    exit 1
+fi
+
+# Learn $BORG_REPO
+source /etc/borg-helper/borg-helper.conf
+
+# Some helpers and error handling
+info() { printf "\n%s %s\n\n" "$( date )" "$*" >&2; }
+trap 'echo $( date ) Backup interrupted >&2; exit 2' INT TERM
+
+# Bail if borg is already running, maybe previous run didn't finish
+if pidof -x borg >/dev/null; then
+    info "Backup already running - exiting"
+    exit
+fi
+
+info "Starting backup"
+
+# add "--progress \" to params for immediate feedback
+
+borg create \
+  --remote-path=borg1                   \
+  --verbose                             \
+  --stats                               \
+  --show-rc                             \
+  --checkpoint-interval 600             \
+  --compression zstd,20                 \
+  --one-file-system                     \
+  --exclude-from=/etc/borg-helper/exclude      \
+  --exclude-caches                      \
+  ::'laptop--{now:%Y-%m-%d--%H-%M-%S}'  \
+  /
+
+backup_exit=$?
+backup_log=`tail -n 19 /var/log/borg.log`
+
+info "Pruning repository"
+
+# Use the `prune` subcommand to maintain 30 daily, 5 weekly and 60 monthly
+# archives of THIS machine. The '{hostname}-' prefix is very important to
+# limit prune's operation to this machine's archives and not apply to
+# other machine's archives also.
+
+borg prune                 \
+  --remote-path=borg1      \
+  --verbose                \
+  --list                   \
+  --prefix 'laptop--'      \
+  --keep-daily=30          \
+  --keep-weekly=5          \
+  --keep-monthly=60
+
+prune_exit=$?
+
+# use highest exit code as global exit code
+global_exit=$(( backup_exit > prune_exit ? backup_exit : prune_exit ))
+
+if [ ${global_exit} -lt 1 ];
+then
+    sudo --user="#$DESKTOP_NOTIFY_USER_ID" DISPLAY=:0 DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$DESKTOP_NOTIFY_USER_ID/bus notify-send 'Backup Successful' "$backup_log" --urgency=normal --expire-time=20 --icon=security-medium
+fi
+
+if [ ${global_exit} -eq 1 ];
+then
+    info "Backup and/or Prune finished with a warning"
+fi
+
+if [ ${global_exit} -gt 1 ];
+then
+    info "Backup and/or Prune finished with an error"
+fi
+
+exit ${global_exit}
