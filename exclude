@@ -30,3 +30,6 @@
 *.rsync_cache
 *.gradle/caches*
 *.thumbnails
+
+/var/lib/monero
+/srv/bitcoin
