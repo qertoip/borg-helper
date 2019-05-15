@@ -51,6 +51,7 @@ borg prune                 \
   --verbose                \
   --list                   \
   --prefix 'laptop--'      \
+  --keep-within=3d         \
   --keep-daily=30          \
   --keep-weekly=5          \
   --keep-monthly=60
